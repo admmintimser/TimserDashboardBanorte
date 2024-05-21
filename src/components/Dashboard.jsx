@@ -125,7 +125,7 @@ const Dashboard = () => {
                 branchId: 1,
                 patientId: customerId,
                 observations: "",
-                customerId: appointment.sampleLocation,
+                customerId: appointment.sampleLocationValue,
                 customerOrderNumber: "",
                 extraField1: "",
                 extraField2: "",
