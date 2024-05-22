@@ -26,43 +26,22 @@ const Dashboard = () => {
         fetchData();
     }, []);
 
-    const handleUpdateToma = async (appointmentId, newStatus, appointment) => {
-        try {
-            const { data } = await axios.put(
-                `https://webapitimser.azurewebsites.net/api/v1/appointment/update/${appointmentId}`,
-                {
-                    tomaProcesada: newStatus
-                },
-                { withCredentials: true }
-            );
-
-            setAppointments((prevAppointments) => prevAppointments.map(
-                (appt) => appt._id === appointmentId
-                    ? { ...appt, tomaProcesada: newStatus }
-                    : appt
-            ));
-
-            toast.success("Estatus de toma actualizado con éxito");
-        } catch (error) {
-            toast.error(
-                error.response?.data?.message || "Error al actualizar el estatus de toma"
-            );
-        }
-    };
-
     const handleUpdateDevelab = async (appointmentId, newStatus, appointment) => {
         try {
+            const currentDateTime = new Date().toISOString();
             const { data } = await axios.put(
                 `https://webapitimser.azurewebsites.net/api/v1/appointment/update/${appointmentId}`,
                 {
-                    tomaEntregada: newStatus
+                    tomaEntregada: newStatus,
+                    tomaProcesada: true,
+                    fechaToma: currentDateTime,
                 },
                 { withCredentials: true }
             );
 
             setAppointments((prevAppointments) => prevAppointments.map(
                 (appt) => appt._id === appointmentId
-                    ? { ...appt, tomaEntregada: newStatus }
+                    ? { ...appt, tomaEntregada: newStatus, tomaProcesada: true, fechaToma: currentDateTime }
                     : appt
             ));
 
@@ -80,7 +59,6 @@ const Dashboard = () => {
 
     const performExternalApiCalls = async (appointment) => {
         try {
-            // Login and get TokenDevel
             const loginResponse = await axios.post("https://webapi.devellab.mx/api/Account/login", {
                 username: "mhs",
                 password: "cd098f3b9eae4ae7af3911aec1847d76"
@@ -88,7 +66,6 @@ const Dashboard = () => {
             const token = loginResponse.data.accessToken;
             setTokenDevel(token);
 
-            // Create JSON1 and POST to /Patient
             const patientData = {
                 code: "",
                 name: appointment.patientFirstName,
@@ -117,10 +94,8 @@ const Dashboard = () => {
             const customerId = patientResponse.data.customerId;
             appointment.ClienteDevelab = customerId;
 
-            // Ensure sampleDate is correctly formatted
             const sampleDate = new Date(appointment.fechaToma).toISOString().slice(0, 16);
 
-            // Create JSON2 and POST to /Order
             const orderData = {
                 branchId: 1,
                 patientId: customerId,
@@ -157,50 +132,6 @@ const Dashboard = () => {
         }
     };
 
-    const handleUpdateFlebo = async (appointmentId, newFlebo) => {
-        try {
-            const { data } = await axios.put(
-                `https://webapitimser.azurewebsites.net/api/v1/appointment/update/${appointmentId}`,
-                {
-                    flebotomista: newFlebo
-                },
-                { withCredentials: true }
-            );
-            setAppointments((prevAppointments) => prevAppointments.map(
-                (appointment) => appointment._id === appointmentId
-                    ? { ...appointment, flebotomista: newFlebo }
-                    : appointment
-            ));
-            toast.success("Flebotomista actualizado con éxito");
-        } catch (error) {
-            toast.error(
-                error.response?.data?.message || "Error al actualizar el flebotomista"
-            );
-        }
-    };
-
-    const handleUpdateDateTime = async (appointmentId, newDateTime) => {
-        try {
-            const { data } = await axios.put(
-                `https://webapitimser.azurewebsites.net/api/v1/appointment/update/${appointmentId}`,
-                {
-                    fechaToma: newDateTime
-                },
-                { withCredentials: true }
-            );
-            setAppointments((prevAppointments) => prevAppointments.map(
-                (appointment) => appointment._id === appointmentId
-                    ? { ...appointment, fechaToma: newDateTime }
-                    : appointment
-            ));
-            toast.success("Fecha y hora actualizadas con éxito");
-        } catch (error) {
-            toast.error(
-                error.response?.data?.message || "Error al actualizar la fecha y hora"
-            );
-        }
-    };
-
     if (!isAuthenticated) {
       return <Navigate to="/login" />;
     }
@@ -233,9 +164,6 @@ const Dashboard = () => {
                             <th>Lugar de toma</th>
                             <th>Ayuno</th>
                             <th>Tomada</th>
-                            <th>Flebotomista</th>
-                            <th>Fecha y Hora de Toma</th>
-                            <th>Estatus Develab</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -245,49 +173,16 @@ const Dashboard = () => {
                                 <td>{appointment.sampleLocation}</td>
                                 <td>{`${appointment.fastingHours} horas`}</td>
                                 <td>
-                                    <select
-                                        value={appointment.tomaProcesada}
-                                        onChange={(e) => handleUpdateToma(appointment._id, e.target.value === 'true', appointment)}
-                                        className={appointment.tomaProcesada ? "value-accepted" : "value-rejected"}
+                                    <button
+                                        onClick={() => handleUpdateDevelab(appointment._id, true, appointment)}
+                                        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
                                     >
-                                        <option value="false">Pendiente</option>
-                                        <option value="true">Tomada</option>
-                                    </select>
-                                </td>
-                                <td>
-                                    <select
-                                        value={appointment.flebotomista}
-                                        onChange={(e) => handleUpdateFlebo(appointment._id, e.target.value)}
-                                        className="dropdown-selector"
-                                    >
-                                        <option value="">Selecciona un flebotomista</option>
-                                        <option value="Gabriela Mata">Gabriela Mata</option>
-                                        <option value="Nohemi Garcia">Nohemi Garcia</option>
-                                        <option value="Ayudante MHS">Ayudante MHS</option>
-                                        <option value="MHS">MHS</option>
-                                    </select>
-                                </td>
-                                <td>
-                                    <input
-                                        type="datetime-local"
-                                        value={appointment.fechaToma ? new Date(appointment.fechaToma).toISOString().slice(0, 16) : ''}
-                                        onChange={(e) => handleUpdateDateTime(appointment._id, e.target.value)}
-                                        className="date-time-input"
-                                    />
-                                </td>
-                                <td>
-                                    <select
-                                        value={appointment.tomaEntregada}
-                                        onChange={(e) => handleUpdateDevelab(appointment._id, e.target.value === 'true', appointment)}
-                                        className={appointment.tomaEntregada ? "value-accepted" : "value-rejected"}
-                                    >
-                                        <option value="false">Pendiente</option>
-                                        <option value="true">Enviada</option>
-                                    </select>
+                                        Procesar Toma
+                                    </button>
                                 </td>
                             </tr>
                         )) : <tr>
-                            <td colSpan="7">No appointments found.</td>
+                            <td colSpan="6">No appointments found.</td>
                         </tr>}
                     </tbody>
                 </table>
