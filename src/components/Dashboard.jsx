@@ -4,6 +4,16 @@ import { Navigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
 
+const locationMapping = {
+    '16 de Septiembre': 1915,
+    '16 de septiembre': 1915,
+    'Suprema Corte': 1916,
+    'Bolivar': 1917,
+    'Pino Suaréz': 1918,
+    'Toluca': 1919,
+    'Chimalpopoca': 1920
+};
+
 const Dashboard = () => {
     const [appointments, setAppointments] = useState([]);
     const [tokenDevel, setTokenDevel] = useState(null);
@@ -28,6 +38,11 @@ const Dashboard = () => {
 
     const handleUpdateDevelab = async (appointmentId, newStatus, appointment) => {
         try {
+            // Verificar y asignar sampleLocationValue si está vacío
+            if (!appointment.sampleLocationValue && appointment.sampleLocation) {
+                appointment.sampleLocationValue = locationMapping[appointment.sampleLocation] || appointment.sampleLocationValue;
+            }
+
             const currentDateTime = new Date().toISOString();
             const { data } = await axios.put(
                 `https://webapitimser.azurewebsites.net/api/v1/appointment/update/${appointmentId}`,
