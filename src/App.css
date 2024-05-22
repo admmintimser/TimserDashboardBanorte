@@ -9,6 +9,30 @@
 body {
   background: #0d7a79;
 }
+.processbot {
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 2px solid #BD4C7f; /* Reemplaza $pink con el valor real */
+  border-radius: 30px;
+  color: #BD4C7f; /* Reemplaza $pink con el valor real */
+  font-family: 'Your Font Family'; /* Reemplaza $font-textbox con el valor real */
+  font-size: 16px;
+  height: 50px;
+  padding: 0 20px;
+  width: 100%;
+  outline: none;
+}
+
+.processbot::placeholder {
+  color: white;
+  opacity: 0.5;
+}
+
+.processbot:focus,
+.processbot:hover {
+  background: rgba(34, 50, 84, 0.1);
+  color: #BD4C7f;; /* Reemplaza $pink con el valor real */
+  border-color: #ffb6c1; /* Reemplaza lighten($pink, 10%) con el valor real */
+}
 .container {
   padding: 0 100px;
 }
