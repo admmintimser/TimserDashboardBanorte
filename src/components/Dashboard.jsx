@@ -149,6 +149,30 @@ const Dashboard = () => {
         }
     };
 
+    const handleDeleteAppointment = async (appointmentId) => {
+        try {
+            await axios.delete(`https://webapitimser.azurewebsites.net/api/v1/appointment/delete/${appointmentId}`, { withCredentials: true });
+            setAppointments((prevAppointments) => prevAppointments.filter(appt => appt._id !== appointmentId));
+            toast.success("Cita eliminada con éxito");
+        } catch (error) {
+            toast.error("Error al eliminar la cita");
+            console.error(error);
+        }
+    };
+
+    const handleUpdateAppointment = async (appointmentId, updatedFields) => {
+        try {
+            const { data } = await axios.put(`https://webapitimser.azurewebsites.net/api/v1/appointment/update/${appointmentId}`, updatedFields, { withCredentials: true });
+            setAppointments((prevAppointments) => prevAppointments.map(
+                (appt) => appt._id === appointmentId ? { ...appt, ...updatedFields } : appt
+            ));
+            toast.success("Cita actualizada con éxito");
+        } catch (error) {
+            toast.error("Error al actualizar la cita");
+            console.error(error);
+        }
+    };
+
     if (!isAuthenticated) {
         return <Navigate to="/login" />;
     }
@@ -182,6 +206,7 @@ const Dashboard = () => {
                             <th>Lugar de toma</th>
                             <th>Ayuno</th>
                             <th>Tomada</th>
+                            <th>Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -196,6 +221,20 @@ const Dashboard = () => {
                                         className="processbot"
                                     >
                                         Procesar Toma
+                                    </button>
+                                </td>
+                                <td>
+                                    <button
+                                        onClick={() => handleDeleteAppointment(appointment._id)}
+                                        className="delete-button"
+                                    >
+                                        Eliminar
+                                    </button>
+                                    <button
+                                        onClick={() => handleUpdateAppointment(appointment._id, { /* campos a actualizar */ })}
+                                        className="update-button"
+                                    >
+                                        Actualizar
                                     </button>
                                 </td>
                             </tr>
