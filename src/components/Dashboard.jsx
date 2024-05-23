@@ -20,25 +20,27 @@ const Dashboard = () => {
     const { isAuthenticated, authToken, admin } = useContext(Context);
     const [searchTerm, setSearchTerm] = useState('');
 
+    const fetchData = async () => {
+        try {
+            const { data } = await axios.get(
+                "https://webapitimser.azurewebsites.net/api/v1/appointment/getall",
+                { withCredentials: true }
+            );
+            setAppointments(data.appointments.reverse()); // Mostrar citas en orden inverso
+        } catch (error) {
+            console.error("Error fetching data", error);
+            setAppointments([]);
+        }
+    };
+
     useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const { data } = await axios.get(
-                    "https://webapitimser.azurewebsites.net/api/v1/appointment/getall",
-                    { withCredentials: true }
-                );
-                setAppointments(data.appointments);
-            } catch (error) {
-                console.error("Error fetching data", error);
-                setAppointments([]);
-            }
-        };
         fetchData();
+        const interval = setInterval(fetchData, 60000); // Actualizar cada minuto
+        return () => clearInterval(interval);
     }, []);
 
     const handleUpdateDevelab = async (appointmentId, newStatus, appointment) => {
         try {
-            // Verificar y asignar sampleLocationValue si está vacío
             if (!appointment.sampleLocationValue && appointment.sampleLocation) {
                 appointment.sampleLocationValue = locationMapping[appointment.sampleLocation] || appointment.sampleLocationValue;
             }
@@ -148,7 +150,7 @@ const Dashboard = () => {
     };
 
     if (!isAuthenticated) {
-      return <Navigate to="/login" />;
+        return <Navigate to="/login" />;
     }
 
     return (
@@ -172,6 +174,7 @@ const Dashboard = () => {
             </div>
             <div className="banner">
                 <h5>Preventix</h5>
+                <button onClick={fetchData} className="update-button">Actualizar</button>
                 <table>
                     <thead>
                         <tr>
