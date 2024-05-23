@@ -13,7 +13,7 @@ body {
   background-color: rgba(255, 255, 255, 0.1);
   border: 2px solid #BD4C7f; /* Reemplaza $pink con el valor real */
   border-radius: 30px;
-  color: #BD4C7f; /* Reemplaza $pink con el valor real */
+  color: white; /* Reemplaza $pink con el valor real */
   font-family: 'Your Font Family'; /* Reemplaza $font-textbox con el valor real */
   font-size: 16px;
   height: 50px;
@@ -23,7 +23,7 @@ body {
 }
 
 .processbot::placeholder {
-  color: white;
+  color: BD4C7f;
   opacity: 0.5;
 }
 
