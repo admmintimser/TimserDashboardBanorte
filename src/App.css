@@ -9,6 +9,33 @@
 body {
   background: #0d7a79;
 }
+
+.delete-button{
+  background-color: #bd0000;
+  border: 2px solid #e21010; /* Reemplaza $pink con el valor real */
+  border-radius: 30px;
+  color: white; /* Reemplaza $pink con el valor real */
+  font-family: 'Your Font Family'; /* Reemplaza $font-textbox con el valor real */
+  font-size: 12px;
+  height: 25px;
+  padding: 0 20px;
+  width: 100%;
+  outline: none;
+}
+
+.delete-button::placeholder {
+  color: BD4C7f;
+  opacity: 0.5;
+}
+
+.delete-button:focus,
+.delete-button:hover {
+  background: rgba(34, 50, 84, 0.1);
+  color: #ff1e00;; /* Reemplaza $pink con el valor real */
+  border-color: #f32a07; /* Reemplaza lighten($pink, 10%) con el valor real */
+}
+
+
 .update-button{
   background-color: #0d7a79;
   border: 2px solid #0d7a79; /* Reemplaza $pink con el valor real */
