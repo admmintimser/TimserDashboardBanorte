@@ -3,6 +3,8 @@ import { Context } from "../main";
 import { Navigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 
 const locationMapping = {
     '16 de Septiembre': 1915,
@@ -190,6 +192,15 @@ const Dashboard = () => {
         handleUpdateAppointment(editingAppointment, formValues);
     };
 
+    const downloadExcel = () => {
+        const worksheet = XLSX.utils.json_to_sheet(appointments);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Appointments");
+        const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+        const data = new Blob([excelBuffer], { type: "application/octet-stream" });
+        saveAs(data, "appointments.xlsx");
+    };
+
     if (!isAuthenticated) {
         return <Navigate to="/login" />;
     }
@@ -209,14 +220,14 @@ const Dashboard = () => {
                     <h3>{appointments.length}</h3>
                 </div>
                 <div className="thirdBox">
-                    <p>Tomadas</p>
+                    <p>Procesadas</p>
                     <h3>{appointments.filter(appt => appt.tomaProcesada).length}</h3>
                 </div>
-                
             </div>
             <div className="banner">
                 <h5>Preventix</h5>
                 <button onClick={fetchData} className="update-button">Actualizar</button>
+                <button onClick={downloadExcel} className="download-button">Descargar Excel</button>
                 <table>
                     <thead>
                         <tr>
