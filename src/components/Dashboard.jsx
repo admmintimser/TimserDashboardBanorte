@@ -5,6 +5,7 @@ import axios from "axios";
 import { toast } from "react-toastify";
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
+import { FaSearch } from "react-icons/fa"; // Asegúrate de importar FaSearch
 
 const locationMapping = {
     '16 de Septiembre': 1915,
@@ -22,6 +23,7 @@ const Dashboard = () => {
     const { isAuthenticated, authToken, admin } = useContext(Context);
     const [editingAppointment, setEditingAppointment] = useState(null);
     const [formValues, setFormValues] = useState({});
+    const [searchTerm, setSearchTerm] = useState(''); // Nueva variable de estado para el término de búsqueda
 
     const fetchData = async () => {
         try {
@@ -38,7 +40,7 @@ const Dashboard = () => {
 
     useEffect(() => {
         fetchData();
-        const interval = setInterval(fetchData, 60000); // Actualizar cada minuto
+        const interval = setInterval(fetchData, 30000); // Actualizar cada minuto
         return () => clearInterval(interval);
     }, []);
 
@@ -145,9 +147,9 @@ const Dashboard = () => {
 
             appointment.FolioDevelab = orderResponse.data.orderNumber;
             appointment.OrderIDDevelab = orderResponse.data.orderId;
-            toast.success("Data sent to Develab successfully");
+            toast.success("Paciente Cargada exitosamente a Devellab");
         } catch (error) {
-            toast.error("Error while performing external API calls");
+            toast.error("Campos actualizados");
             console.error(error);
         }
     };
@@ -220,8 +222,17 @@ const Dashboard = () => {
                     <h3>{appointments.length}</h3>
                 </div>
                 <div className="thirdBox">
-                    <p>Procesadas</p>
-                    <h3>{appointments.filter(appt => appt.tomaProcesada).length}</h3>
+                    <div className="card-content">
+                        <span className="card-title">Búsqueda</span>
+                        <input
+                            type="text"
+                            placeholder="Buscar por nombre, apellido o lugar..."
+                            value={searchTerm}
+                            onChange={e => setSearchTerm(e.target.value.toLowerCase())}
+                            className="search-input"
+                        />
+                        <FaSearch className="card-icon" />
+                    </div>
                 </div>
             </div>
             <div className="banner">
@@ -239,7 +250,11 @@ const Dashboard = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {appointments.length > 0 ? appointments.map((appointment) => (
+                        {appointments.length > 0 ? appointments.filter(appointment => 
+                            appointment.patientFirstName.toLowerCase().includes(searchTerm) ||
+                            appointment.patientLastName.toLowerCase().includes(searchTerm) ||
+                            appointment.sampleLocation.toLowerCase().includes(searchTerm)
+                        ).map((appointment) => (
                             <tr key={appointment._id}>
                                 {editingAppointment === appointment._id ? (
                                     <td colSpan="5">
