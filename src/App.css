@@ -58,6 +58,55 @@ body {
   border-color: #06dad6; /* Reemplaza lighten($pink, 10%) con el valor real */
 }
 
+.appoin-button{
+  background-color: #0d1d7a;
+  border: 2px solid #0d7a79; /* Reemplaza $pink con el valor real */
+  border-radius: 30px;
+  color: white; /* Reemplaza $pink con el valor real */
+  font-family: 'Your Font Family'; /* Reemplaza $font-textbox con el valor real */
+  font-size: 12px;
+  height: 25px;
+  padding: 0 20px;
+  width: 33%;
+  outline: none;
+}
+
+.appoin-button::placeholder {
+  color: BD4C7f;
+  opacity: 0.5;
+}
+
+.appoin-button:hover {
+  background: rgba(34, 50, 84, 0.1);
+  color: #0d7a79;; /* Reemplaza $pink con el valor real */
+  border-color: #06dad6; /* Reemplaza lighten($pink, 10%) con el valor real */
+}
+
+
+.cancel-button{
+  background-color: #790303;
+  border: 2px solid #790303; /* Reemplaza $pink con el valor real */
+  border-radius: 30px;
+  color: white; /* Reemplaza $pink con el valor real */
+  font-family: 'Your Font Family'; /* Reemplaza $font-textbox con el valor real */
+  font-size: 12px;
+  height: 25px;
+  padding: 0 20px;
+  width: 33%;
+  outline: none;
+}
+
+.cancel-button::placeholder {
+  color: BD4C7f;
+  opacity: 0.5;
+}
+
+.cancel-button:hover {
+  background: rgba(34, 50, 84, 0.1);
+  color: #ce0b0b;; /* Reemplaza $pink con el valor real */
+  border-color: #790303; /* Reemplaza lighten($pink, 10%) con el valor real */
+}
+
 .update-button{
   background-color: #0d7a79;
   border: 2px solid #0d7a79; /* Reemplaza $pink con el valor real */
@@ -67,7 +116,7 @@ body {
   font-size: 12px;
   height: 25px;
   padding: 0 20px;
-  width: 50%;
+  width: 33%;
   outline: none;
 }
 
@@ -91,7 +140,7 @@ body {
   font-size: 12px;
   height: 25px;
   padding: 0 20px;
-  width: 50%;
+  width: 33%;
   outline: none;
 }
 

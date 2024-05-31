@@ -8,7 +8,6 @@ import { saveAs } from 'file-saver';
 import { FaSearch } from "react-icons/fa"; // Asegúrate de importar FaSearch
 
 const locationMapping = {
-    '16 de Septiembre': 1915,
     '16 de septiembre': 1915,
     'Suprema Corte': 1916,
     'Bolivar': 1917,
@@ -22,9 +21,14 @@ const Dashboard = () => {
     const [tokenDevel, setTokenDevel] = useState(null);
     const { isAuthenticated, authToken, admin } = useContext(Context);
     const [editingAppointment, setEditingAppointment] = useState(null);
-    const [formValues, setFormValues] = useState({});
-    const [searchTerm, setSearchTerm] = useState(''); // Nueva variable de estado para el término de búsqueda
+    const [formValues, setFormValues] = useState({
+        privacyConsent: true,
+        informedConsent: true,
+        fastingHours: 4,
+    });
+    const [searchTerm, setSearchTerm] = useState('');
     const [successfulUpdates, setSuccessfulUpdates] = useState({});
+    const [showModal, setShowModal] = useState(false);
 
     const fetchData = async () => {
         try {
@@ -48,53 +52,88 @@ const Dashboard = () => {
         return () => clearInterval(interval);
     }, []);
 
+    const addPatient = () => {
+        setShowModal(true);
+    };
+
+    const handleModalClose = () => {
+        setShowModal(false);
+    };
+
+    const handleFormChange = (e) => {
+        const { name, value, type, checked } = e.target;
+        const updatedValue = type === 'checkbox' ? checked : value;
+        setFormValues((prevValues) => ({
+            ...prevValues,
+            [name]: updatedValue,
+            ...(name === 'email' && { confirmEmail: updatedValue })
+        }));
+    };
+
+    const handleFormSubmit1 = async (e) => {
+        e.preventDefault();
+        try {
+            await axios.post("https://webapitimser.azurewebsites.net/api/v1/appointment/post", formValues, {
+                withCredentials: true,
+            });
+            toast.success("Cita creada con éxito");
+            fetchData();
+            handleModalClose();
+        } catch (error) {
+            if (error.response && error.response.data && error.response.data.message) {
+                toast.error("Error al crear la cita: " + error.response.data.message);
+            } else {
+                toast.error("Error al crear la cita: " + error.message);
+            }
+        }
+    };
+
     const handleUpdateDevelab = async (appointmentId, newStatus, appointment) => {
-    // Verificar si ya fue procesada con éxito y pedir confirmación
-    if (successfulUpdates[appointmentId]) {
-        const confirm = window.confirm("Esta cita ya fue procesada con éxito. ¿Deseas enviar de nuevo?");
-        if (!confirm) {
-            return; // Detener si el usuario no confirma
-        }
-    }
-
-    try {
-        if (!appointment.sampleLocationValue && appointment.sampleLocation) {
-            appointment.sampleLocationValue = locationMapping[appointment.sampleLocation] || appointment.sampleLocationValue;
+        // Verificar si ya fue procesada con éxito y pedir confirmación
+        if (successfulUpdates[appointmentId]) {
+            const confirm = window.confirm("Esta cita ya fue procesada con éxito. ¿Deseas enviar de nuevo?");
+            if (!confirm) {
+                return; // Detener si el usuario no confirma
+            }
         }
 
-        const currentDateTime = new Date().toISOString();
-        const { data } = await axios.put(
-            `https://webapitimser.azurewebsites.net/api/v1/appointment/update/${appointmentId}`,
-            {
-                tomaEntregada: newStatus,
-                tomaProcesada: true,
-                fechaToma: currentDateTime,
-            },
-            { withCredentials: true, headers: { Authorization: `Bearer ${authToken}` } }
-        );
+        try {
+            if (!appointment.sampleLocationValue && appointment.sampleLocation) {
+                appointment.sampleLocationValue = locationMapping[appointment.sampleLocation] || appointment.sampleLocationValue;
+            }
 
-        setAppointments((prevAppointments) => prevAppointments.map(
-            (appt) => appt._id === appointmentId
-                ? { ...appt, tomaEntregada: newStatus, tomaProcesada: true, fechaToma: currentDateTime }
-                : appt
-        ));
+            const currentDateTime = new Date().toISOString();
+            const { data } = await axios.put(
+                `https://webapitimser.azurewebsites.net/api/v1/appointment/update/${appointmentId}`,
+                {
+                    tomaEntregada: newStatus,
+                    tomaProcesada: true,
+                    fechaToma: currentDateTime,
+                },
+                { withCredentials: true, headers: { Authorization: `Bearer ${authToken}` } }
+            );
 
-        // Marcar como exitoso
-        setSuccessfulUpdates(prev => ({ ...prev, [appointmentId]: true }));
-        toast.success("Estatus Develab actualizado con éxito");
+            setAppointments((prevAppointments) => prevAppointments.map(
+                (appt) => appt._id === appointmentId
+                    ? { ...appt, tomaEntregada: newStatus, tomaProcesada: true, fechaToma: currentDateTime }
+                    : appt
+            ));
 
-        if (newStatus) {
-            await performExternalApiCalls(appointment);
+            // Marcar como exitoso
+            setSuccessfulUpdates(prev => ({ ...prev, [appointmentId]: true }));
+            toast.success("Estatus Develab actualizado con éxito");
+
+            if (newStatus) {
+                await performExternalApiCalls(appointment);
+            }
+        } catch (error) {
+            toast.error(
+                error.response?.data?.message || "Error al actualizar el estatus Develab"
+            );
+            // Reiniciar el estado de éxito en caso de error
+            setSuccessfulUpdates(prev => ({ ...prev, [appointmentId]: false }));
         }
-    } catch (error) {
-        toast.error(
-            error.response?.data?.message || "Error al actualizar el estatus Develab"
-        );
-        // Reiniciar el estado de éxito en caso de error
-        setSuccessfulUpdates(prev => ({ ...prev, [appointmentId]: false }));
-    }
-};
-
+    };
 
     const performExternalApiCalls = async (appointment) => {
         try {
@@ -104,7 +143,7 @@ const Dashboard = () => {
             });
             const token = loginResponse.data.accessToken;
             setTokenDevel(token);
-    
+
             const patientData = {
                 code: "",
                 name: appointment.patientFirstName,
@@ -123,7 +162,7 @@ const Dashboard = () => {
                 extraField5: "",
                 extraField6: ""
             };
-    
+
             const patientResponse = await axios.post("https://webapi.devellab.mx/api/Patient/", patientData, {
                 headers: {
                     accept: "*/*",
@@ -131,11 +170,11 @@ const Dashboard = () => {
                 }
             });
             const customerId = patientResponse.data.customerId;
-    
+
             // Verificar que 'fechaToma' es un valor de fecha válido
             const fechaTomaValida = appointment.fechaToma ? new Date(appointment.fechaToma) : new Date();
             const sampleDate = fechaTomaValida.toISOString().slice(0, 16);
-    
+
             const orderData = {
                 branchId: 31,
                 patientId: customerId,
@@ -155,25 +194,25 @@ const Dashboard = () => {
                 ],
                 sampleDate: sampleDate
             };
-    
+
             const orderResponse = await axios.post("https://webapi.devellab.mx/api/Order/", orderData, {
                 headers: {
                     accept: "*/*",
                     Authorization: `Bearer ${token}`
                 }
             });
-    
+
             const updateFields = {
                 FolioDevelab: orderResponse.data.orderNumber,
                 OrderIDDevelab: orderResponse.data.orderId
             };
-    
+
             // Actualizar el appointment en la base de datos local
             const updateResponse = await axios.put(`https://webapitimser.azurewebsites.net/api/v1/appointment/update/${appointment._id}`, updateFields, {
                 withCredentials: true,
                 headers: { Authorization: `Bearer ${authToken}` }
             });
-    
+
             // Actualizar el estado local para reflejar estos cambios
             setAppointments((prevAppointments) => prevAppointments.map(appt => {
                 if (appt._id === appointment._id) {
@@ -184,14 +223,13 @@ const Dashboard = () => {
                 }
                 return appt;
             }));
-    
+
             toast.success("Paciente cargado exitosamente a Devellab y actualizado localmente");
         } catch (error) {
             toast.error("Error al procesar la información del paciente en Devellab o localmente: " + error.message);
             console.error(error);
         }
     };
-    
 
     const handleDeleteAppointment = async (appointmentId) => {
         if (window.confirm("¿Estás seguro que deseas eliminar esta cita?")) {
@@ -283,6 +321,77 @@ const Dashboard = () => {
                 <h5>Preventix</h5>
                 <button onClick={fetchData} className="update-button">Actualizar</button>
                 <button onClick={downloadExcel} className="download-button">Descargar Excel</button>
+                <button onClick={addPatient} className="appoin-button">Agregar </button>
+                {showModal && (
+                <div className="modal">
+                    <div className="modal-content">
+                        <span className="close" onClick={handleModalClose}>&times;</span>
+                        <h2>Agregar Nueva Cita</h2>
+                        <form onSubmit={handleFormSubmit1}>
+                            <input
+                                type="text"
+                                name="patientFirstName"
+                                placeholder="Nombre"
+                                value={formValues.patientFirstName}
+                                onChange={handleFormChange}
+                                className="input"
+                                required
+                            />
+                            <input
+                                type="text"
+                                name="patientLastName"
+                                placeholder="Apellido"
+                                value={formValues.patientLastName}
+                                onChange={handleFormChange}
+                                className="input"
+                                required
+                            />
+                            <input
+                                type="email"
+                                name="email"
+                                placeholder="Correo Electrónico"
+                                value={formValues.email}
+                                onChange={handleFormChange}
+                                className="input"
+                                required
+                            />
+                            <input
+                                type="date"
+                                name="birthDate"
+                                placeholder="Fecha de Nacimiento"
+                                value={formValues.birthDate}
+                                onChange={handleFormChange}
+                                className="input"
+                                required
+                            />
+                            <input
+                                type="text"
+                                name="mobilePhone"
+                                placeholder="Teléfono móvil"
+                                value={formValues.mobilePhone}
+                                onChange={handleFormChange}
+                                className="input"
+                                required
+                            />
+                            <select
+    name="sampleLocation"
+    onChange={handleFormChange}
+    className="input"
+    required
+>
+    <option value="">Selecciona una ubicación</option>
+    <option value="16 de septiembre">16 de septiembre</option>
+    <option value="Suprema Corte">Suprema Corte</option>
+    <option value="Bolivar">Bolivar</option>
+    <option value="Pino Suaréz">Pino Suaréz</option>
+    <option value="Toluca">Toluca</option>
+    <option value="Chimalpopoca">Chimalpopoca</option>
+</select>
+                            <button type="submit" className="save-button">Guardar</button>
+                        </form>
+                    </div>
+                </div>
+            )}
                 <table>
                     <thead>
                         <tr>
@@ -358,7 +467,6 @@ const Dashboard = () => {
                                             </button>
                                         </td>
                                         <td>
-                                            
                                             <button
                                                 onClick={() => handleEditClick(appointment)}
                                                 className="update-button1"
