@@ -158,10 +158,10 @@ body {
 
 .processbot {
   background-color: #BD4C7f;
-  border: 2px solid #BD4C7f; /* Reemplaza $pink con el valor real */
+  border: 2px solid #BD4C7f;
   border-radius: 30px;
-  color: white; /* Reemplaza $pink con el valor real */
-  font-family: 'Your Font Family'; /* Reemplaza $font-textbox con el valor real */
+  color: white;
+  font-family: 'Your Font Family';
   font-size: 16px;
   height: 50px;
   padding: 0 20px;
@@ -169,17 +169,12 @@ body {
   outline: none;
 }
 
-.processbot::placeholder {
-  color: BD4C7f;
-  opacity: 0.5;
+.processbot-green {
+  background-color: green;
+  border-color: green;
 }
 
-.processbot:focus,
-.processbot:hover {
-  background: rgba(34, 50, 84, 0.1);
-  color: #BD4C7f;; /* Reemplaza $pink con el valor real */
-  border-color: #7e3842; /* Reemplaza lighten($pink, 10%) con el valor real */
-}
+
 .container {
   padding: 0 100px;
 }

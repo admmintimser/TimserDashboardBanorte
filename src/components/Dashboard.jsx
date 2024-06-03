@@ -25,6 +25,12 @@ const Dashboard = () => {
         privacyConsent: true,
         informedConsent: true,
         fastingHours: 4,
+        patientFirstName: '',
+        patientLastName: '',
+        email: '',
+        birthDate: '',
+        mobilePhone: '',
+        sampleLocation: ''
     });
     const [searchTerm, setSearchTerm] = useState('');
     const [successfulUpdates, setSuccessfulUpdates] = useState({});
@@ -77,6 +83,17 @@ const Dashboard = () => {
                 withCredentials: true,
             });
             toast.success("Cita creada con éxito");
+            setFormValues({ // Restablecer los valores del formulario
+                privacyConsent: true,
+                informedConsent: true,
+                fastingHours: 4,
+                patientFirstName: '',
+                patientLastName: '',
+                email: '',
+                birthDate: '',
+                mobilePhone: '',
+                sampleLocation: ''
+            });
             fetchData();
             handleModalClose();
         } catch (error) {
@@ -89,11 +106,10 @@ const Dashboard = () => {
     };
 
     const handleUpdateDevelab = async (appointmentId, newStatus, appointment) => {
-        // Verificar si ya fue procesada con éxito y pedir confirmación
         if (successfulUpdates[appointmentId]) {
             const confirm = window.confirm("Esta cita ya fue procesada con éxito. ¿Deseas enviar de nuevo?");
             if (!confirm) {
-                return; // Detener si el usuario no confirma
+                return;
             }
         }
 
@@ -119,7 +135,6 @@ const Dashboard = () => {
                     : appt
             ));
 
-            // Marcar como exitoso
             setSuccessfulUpdates(prev => ({ ...prev, [appointmentId]: true }));
             toast.success("Estatus Develab actualizado con éxito");
 
@@ -130,7 +145,6 @@ const Dashboard = () => {
             toast.error(
                 error.response?.data?.message || "Error al actualizar el estatus Develab"
             );
-            // Reiniciar el estado de éxito en caso de error
             setSuccessfulUpdates(prev => ({ ...prev, [appointmentId]: false }));
         }
     };
@@ -171,7 +185,6 @@ const Dashboard = () => {
             });
             const customerId = patientResponse.data.customerId;
 
-            // Verificar que 'fechaToma' es un valor de fecha válido
             const fechaTomaValida = appointment.fechaToma ? new Date(appointment.fechaToma) : new Date();
             const sampleDate = fechaTomaValida.toISOString().slice(0, 16);
 
@@ -207,13 +220,11 @@ const Dashboard = () => {
                 OrderIDDevelab: orderResponse.data.orderId
             };
 
-            // Actualizar el appointment en la base de datos local
             const updateResponse = await axios.put(`https://webapitimser.azurewebsites.net/api/v1/appointment/update/${appointment._id}`, updateFields, {
                 withCredentials: true,
                 headers: { Authorization: `Bearer ${authToken}` }
             });
 
-            // Actualizar el estado local para reflejar estos cambios
             setAppointments((prevAppointments) => prevAppointments.map(appt => {
                 if (appt._id === appointment._id) {
                     return {
@@ -321,7 +332,7 @@ const Dashboard = () => {
                 <h5>Preventix</h5>
                 <button onClick={fetchData} className="update-button">Actualizar</button>
                 <button onClick={downloadExcel} className="download-button">Descargar Excel</button>
-                <button onClick={addPatient} className="appoin-button">Agregar </button>
+                <button onClick={addPatient} className="appoin-button">Agregar</button>
                 {showModal && (
                 <div className="modal">
                     <div className="modal-content">
@@ -374,19 +385,19 @@ const Dashboard = () => {
                                 required
                             />
                             <select
-    name="sampleLocation"
-    onChange={handleFormChange}
-    className="input"
-    required
->
-    <option value="">Selecciona una ubicación</option>
-    <option value="16 de septiembre">16 de septiembre</option>
-    <option value="Suprema Corte">Suprema Corte</option>
-    <option value="Bolivar">Bolivar</option>
-    <option value="Pino Suaréz">Pino Suaréz</option>
-    <option value="Toluca">Toluca</option>
-    <option value="Chimalpopoca">Chimalpopoca</option>
-</select>
+                                name="sampleLocation"
+                                onChange={handleFormChange}
+                                className="input"
+                                required
+                            >
+                                <option value="">Selecciona una ubicación</option>
+                                <option value="16 de septiembre">16 de septiembre</option>
+                                <option value="Suprema Corte">Suprema Corte</option>
+                                <option value="Bolivar">Bolivar</option>
+                                <option value="Pino Suaréz">Pino Suaréz</option>
+                                <option value="Toluca">Toluca</option>
+                                <option value="Chimalpopoca">Chimalpopoca</option>
+                            </select>
                             <button type="submit" className="save-button">Guardar</button>
                         </form>
                     </div>
@@ -461,7 +472,7 @@ const Dashboard = () => {
                                         <td>
                                             <button
                                                 onClick={() => handleUpdateDevelab(appointment._id, true, appointment)}
-                                                className="processbot"
+                                                className={`processbot ${appointment.tomaEntregada ? 'processbot-green' : ''}`}
                                             >
                                                 Procesar Toma
                                             </button>
