@@ -168,7 +168,26 @@ body {
   width: 100%;
   outline: none;
 }
-
+.buttonprint {
+  background-color: #01276e;
+  border: 2px solid #0c4eca;
+  border-radius: 30px;
+  color: white; /* Reemplaza $pink con el valor real */
+  font-family: 'Your Font Family'; /* Reemplaza $font-textbox con el valor real */
+  font-size: 12px;
+  height: 25px;
+  padding: 0 20px;
+  width: 100%;
+  outline: none;
+}
+.buttonprint:hover{
+  background-color: #0458f5;
+  border: 2px solid #0c4eca;
+}
+.buttonprint.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 .processbot-green {
   background-color: green;
   border-color: green;

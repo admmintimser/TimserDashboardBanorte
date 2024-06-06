@@ -6,6 +6,7 @@ import { toast } from "react-toastify";
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import { FaSearch } from "react-icons/fa"; // Asegúrate de importar FaSearch
+import PrintButton from "./PrintButton"; // Asegúrate de importar tu nuevo componente
 
 const locationMapping = {
     '16 de septiembre': 1915,
@@ -477,7 +478,9 @@ const Dashboard = () => {
                                                 Procesar Toma
                                             </button>
                                         </td>
+                                        
                                         <td>
+                                            <PrintButton appointment={appointment} />
                                             <button
                                                 onClick={() => handleEditClick(appointment)}
                                                 className="update-button1"
