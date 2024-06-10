@@ -419,7 +419,9 @@ const Dashboard = () => {
                         {appointments.length > 0 ? appointments.filter(appointment => 
                             appointment.patientFirstName.toLowerCase().includes(searchTerm) ||
                             appointment.patientLastName.toLowerCase().includes(searchTerm) ||
-                            appointment.sampleLocation.toLowerCase().includes(searchTerm)
+                            appointment.sampleLocation.toLowerCase().includes(searchTerm) ||
+                            `${appointment.patientFirstName.toLowerCase()} ${appointment.patientLastName.toLowerCase()}`.includes(searchTerm) ||
+                            appointment._id.toLowerCase().includes(searchTerm)
                         ).map((appointment) => (
                             <tr key={appointment._id}>
                                 {editingAppointment === appointment._id ? (
