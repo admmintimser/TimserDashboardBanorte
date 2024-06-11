@@ -5,8 +5,8 @@ import axios from "axios";
 import { toast } from "react-toastify";
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
-import { FaSearch } from "react-icons/fa"; // Asegúrate de importar FaSearch
-import PrintButton from "./PrintButton"; // Asegúrate de importar tu nuevo componente
+import { FaSearch } from "react-icons/fa";
+import PrintButton from "./PrintButton";
 
 const locationMapping = {
     '16 de septiembre': 1915,
@@ -46,14 +46,12 @@ const Dashboard = () => {
     const fetchData = async () => {
         try {
             const response = await axios.get("https://webapitimser.azurewebsites.net/api/v1/appointment/getall", { withCredentials: true });
-            console.log('Data fetched:', response.data.appointments); // Debugging
             if (response.data.appointments) {
                 setAppointments(response.data.appointments.reverse());
             } else {
                 throw new Error('No appointments data received');
             }
         } catch (error) {
-            console.error("Error fetching data", error);
             toast.error("Error fetching appointments: " + error.message);
             setAppointments([]);
         }
@@ -62,14 +60,12 @@ const Dashboard = () => {
     const fetchDatat = async () => {
         try {
             const response = await axios.get("https://webapitimser.azurewebsites.net/api/v1/appointment/count/today", { withCredentials: true });
-            console.log('Data fetched:', response.data.count); // Debugging
             if (response.data.count !== undefined) {
                 setAppointmentst(response.data.count);
             } else {
                 throw new Error('No count data received');
             }
         } catch (error) {
-            console.error("Error fetching data", error);
             toast.error("Error fetching appointments: " + error.message);
             setAppointmentst(0);
         }
@@ -78,14 +74,12 @@ const Dashboard = () => {
     const fetchDatatp = async () => {
         try {
             const response = await axios.get("https://webapitimser.azurewebsites.net/api/v1/appointment/count/today-processed", { withCredentials: true });
-            console.log('Data fetched:', response.data.count); // Debugging
             if (response.data.count !== undefined) {
                 setAppointmentstp(response.data.count);
             } else {
                 throw new Error('No count data received');
             }
         } catch (error) {
-            console.error("Error fetching data", error);
             toast.error("Error fetching appointments: " + error.message);
             setAppointmentstp(0);
         }
@@ -93,12 +87,12 @@ const Dashboard = () => {
 
     useEffect(() => {
         fetchData();
-        const interval = setInterval(fetchData, 30000); // Actualizar cada minuto
-        fetchDatat(); // Fetch today's appointments
-        const interval1 = setInterval(fetchDatat, 30000); // Actualizar cada minuto
-        fetchDatatp(); // Fetch today's processed appointments
-        const interval2 = setInterval(fetchDatatp, 30000); // Actualizar cada minuto
-       
+        fetchDatat();
+        fetchDatatp();
+        const interval = setInterval(fetchData, 30000);
+        const interval1 = setInterval(fetchDatat, 30000);
+        const interval2 = setInterval(fetchDatatp, 30000);
+
         return () => {
             clearInterval(interval);
             clearInterval(interval1);
@@ -145,11 +139,7 @@ const Dashboard = () => {
             handleModalClose();
             fetchData();
         } catch (error) {
-            if (error.response && error.response.data && error.response.data.message) {
-                toast.error("Error al crear la cita: " + error.response.data.message);
-            } else {
-                toast.error("Error al crear la cita: " + error.message);
-            }
+            toast.error("Error al crear la cita: " + error.message);
         }
     };
 
@@ -190,9 +180,7 @@ const Dashboard = () => {
                 await performExternalApiCalls(appointment);
             }
         } catch (error) {
-            toast.error(
-                error.response?.data?.message || "Error al actualizar el estatus Develab"
-            );
+            toast.error("Error al actualizar el estatus Develab");
             setSuccessfulUpdates(prev => ({ ...prev, [appointmentId]: false }));
         }
     };
@@ -286,7 +274,6 @@ const Dashboard = () => {
             toast.success("Paciente cargado exitosamente a Devellab y actualizado localmente");
         } catch (error) {
             toast.error("Error al procesar la información del paciente en Devellab o localmente: " + error.message);
-            console.error(error);
         }
     };
 
@@ -301,7 +288,6 @@ const Dashboard = () => {
                 toast.success("Cita eliminada con éxito");
             } catch (error) {
                 toast.error("Error al eliminar la cita");
-                console.error(error);
             }
         }
     };
@@ -327,7 +313,6 @@ const Dashboard = () => {
             });
         } catch (error) {
             toast.error("Error al actualizar la cita");
-            console.error(error);
         }
     };
 
@@ -393,7 +378,7 @@ const Dashboard = () => {
                 </div>
             </div>
             <div className="banner">
-                <button onClick={fetchData} className="update-button">Actualizar</button>
+                <button onClick={() => { fetchData(); fetchDatat(); fetchDatatp(); }} className="update-button">Actualizar</button>
                 <button onClick={downloadExcel} className="download-button">Descargar Excel</button>
                 <button onClick={addPatient} className="appoin-button">Agregar</button>
                 {showModal && (
