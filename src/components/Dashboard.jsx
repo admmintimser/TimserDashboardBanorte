@@ -19,6 +19,8 @@ const locationMapping = {
 
 const Dashboard = () => {
     const [appointments, setAppointments] = useState([]);
+    const [appointmentst, setAppointmentst] = useState([]);
+    const [appointmentstp, setAppointmentstp] = useState([]);
     const [tokenDevel, setTokenDevel] = useState(null);
     const { isAuthenticated, authToken, admin } = useContext(Context);
     const [editingAppointment, setEditingAppointment] = useState(null);
@@ -37,6 +39,10 @@ const Dashboard = () => {
     const [successfulUpdates, setSuccessfulUpdates] = useState({});
     const [showModal, setShowModal] = useState(false);
 
+    const formatDate = (date) => {
+        return new Date(date).toISOString().split('T')[0];
+    };
+
     const fetchData = async () => {
         try {
             const response = await axios.get("https://webapitimser.azurewebsites.net/api/v1/appointment/getall", { withCredentials: true });
@@ -53,10 +59,51 @@ const Dashboard = () => {
         }
     };
 
+    const fetchDatat = async () => {
+        try {
+            const response = await axios.get("https://webapitimser.azurewebsites.net/api/v1/appointment/count/today", { withCredentials: true });
+            console.log('Data fetched:', response.data.count); // Debugging
+            if (response.data.count !== undefined) {
+                setAppointmentst(response.data.count);
+            } else {
+                throw new Error('No count data received');
+            }
+        } catch (error) {
+            console.error("Error fetching data", error);
+            toast.error("Error fetching appointments: " + error.message);
+            setAppointmentst(0);
+        }
+    };
+
+    const fetchDatatp = async () => {
+        try {
+            const response = await axios.get("https://webapitimser.azurewebsites.net/api/v1/appointment/count/today-processed", { withCredentials: true });
+            console.log('Data fetched:', response.data.count); // Debugging
+            if (response.data.count !== undefined) {
+                setAppointmentstp(response.data.count);
+            } else {
+                throw new Error('No count data received');
+            }
+        } catch (error) {
+            console.error("Error fetching data", error);
+            toast.error("Error fetching appointments: " + error.message);
+            setAppointmentstp(0);
+        }
+    };
+
     useEffect(() => {
         fetchData();
         const interval = setInterval(fetchData, 30000); // Actualizar cada minuto
-        return () => clearInterval(interval);
+        fetchDatat(); // Fetch today's appointments
+        const interval1 = setInterval(fetchDatat, 30000); // Actualizar cada minuto
+        fetchDatatp(); // Fetch today's processed appointments
+        const interval2 = setInterval(fetchDatatp, 30000); // Actualizar cada minuto
+       
+        return () => {
+            clearInterval(interval);
+            clearInterval(interval1);
+            clearInterval(interval2);
+        };
     }, []);
 
     const addPatient = () => {
@@ -65,6 +112,17 @@ const Dashboard = () => {
 
     const handleModalClose = () => {
         setShowModal(false);
+        setFormValues({
+            privacyConsent: true,
+            informedConsent: true,
+            fastingHours: 4,
+            patientFirstName: '',
+            patientLastName: '',
+            email: '',
+            birthDate: '',
+            mobilePhone: '',
+            sampleLocation: ''
+        });
     };
 
     const handleFormChange = (e) => {
@@ -84,19 +142,8 @@ const Dashboard = () => {
                 withCredentials: true,
             });
             toast.success("Cita creada con éxito");
-            setFormValues({ // Restablecer los valores del formulario
-                privacyConsent: true,
-                informedConsent: true,
-                fastingHours: 4,
-                patientFirstName: '',
-                patientLastName: '',
-                email: '',
-                birthDate: '',
-                mobilePhone: '',
-                sampleLocation: ''
-            });
-            fetchData();
             handleModalClose();
+            fetchData();
         } catch (error) {
             if (error.response && error.response.data && error.response.data.message) {
                 toast.error("Error al crear la cita: " + error.response.data.message);
@@ -205,7 +252,7 @@ const Dashboard = () => {
                     {
                         examId: "E-470"
                     }
-                ],
+                ],  
                 sampleDate: sampleDate
             };
 
@@ -267,6 +314,17 @@ const Dashboard = () => {
             ));
             toast.success("Cita actualizada con éxito");
             setEditingAppointment(null);
+            setFormValues({
+                privacyConsent: true,
+                informedConsent: true,
+                fastingHours: 4,
+                patientFirstName: '',
+                patientLastName: '',
+                email: '',
+                birthDate: '',
+                mobilePhone: '',
+                sampleLocation: ''
+            });
         } catch (error) {
             toast.error("Error al actualizar la cita");
             console.error(error);
@@ -275,7 +333,10 @@ const Dashboard = () => {
 
     const handleEditClick = (appointment) => {
         setEditingAppointment(appointment._id);
-        setFormValues(appointment);
+        setFormValues({
+            ...appointment,
+            birthDate: formatDate(appointment.birthDate)
+        });
     };
 
     const handleInputChange = (e) => {
@@ -304,12 +365,14 @@ const Dashboard = () => {
     return (
         <section className="dashboard page">
             <div className="banner">
-                <div className="firstBox">
-                    <div className="content">
-                        <div>
-                            <h5>{admin && `${admin.firstName} ${admin.lastName}`}</h5>
-                        </div>
-                    </div>
+                
+                <div className="secondBox">
+                    <p>Cuestionarios</p>
+                    <h3>{appointmentst}</h3>
+                </div>
+                <div className="secondBox">
+                    <p>Tomadas</p>
+                    <h3>{appointmentstp}</h3>
                 </div>
                 <div className="secondBox">
                     <p>Pacientes</p>
@@ -330,7 +393,6 @@ const Dashboard = () => {
                 </div>
             </div>
             <div className="banner">
-                <h5>Preventix</h5>
                 <button onClick={fetchData} className="update-button">Actualizar</button>
                 <button onClick={downloadExcel} className="download-button">Descargar Excel</button>
                 <button onClick={addPatient} className="appoin-button">Agregar</button>
@@ -392,6 +454,8 @@ const Dashboard = () => {
                                 required
                             >
                                 <option value="">Selecciona una ubicación</option>
+                                <option value="Sede Insurgentes - Sala de Ajustes">Sede Insurgentes - Sala de Ajustes</option>
+                                <option value="Edificio Revolución - Aula Cristal">Edificio Revolución - Aula Cristal</option>
                                 <option value="16 de septiembre">16 de septiembre</option>
                                 <option value="Suprema Corte">Suprema Corte</option>
                                 <option value="Bolivar">Bolivar</option>
@@ -410,6 +474,7 @@ const Dashboard = () => {
                             <th>Nombre</th>
                             <th>Correo</th>
                             <th>Lugar de toma</th>
+                            <th>Fecha de nacimiento</th>
                             <th>Ayuno</th>
                             <th>Tomada</th>
                             <th>Acciones</th>
@@ -419,9 +484,7 @@ const Dashboard = () => {
                         {appointments.length > 0 ? appointments.filter(appointment => 
                             appointment.patientFirstName.toLowerCase().includes(searchTerm) ||
                             appointment.patientLastName.toLowerCase().includes(searchTerm) ||
-                            appointment.sampleLocation.toLowerCase().includes(searchTerm) ||
-                            `${appointment.patientFirstName.toLowerCase()} ${appointment.patientLastName.toLowerCase()}`.includes(searchTerm) ||
-                            appointment._id.toLowerCase().includes(searchTerm)
+                            appointment.sampleLocation.toLowerCase().includes(searchTerm)
                         ).map((appointment) => (
                             <tr key={appointment._id}>
                                 {editingAppointment === appointment._id ? (
@@ -456,6 +519,13 @@ const Dashboard = () => {
                                                 className="input"
                                             />
                                             <input
+                                                type="date" 
+                                                name="birthDate"
+                                                value={formValues.birthDate}
+                                                onChange={handleInputChange}
+                                                className="input"
+                                            />
+                                            <input
                                                 type="text"
                                                 name="fastingHours"
                                                 value={formValues.fastingHours}
@@ -471,6 +541,7 @@ const Dashboard = () => {
                                         <td>{`${appointment.patientFirstName} ${appointment.patientLastName}`}</td>
                                         <td>{appointment.email}</td>
                                         <td>{appointment.sampleLocation}</td>
+                                        <td>{formatDate(appointment.birthDate)}</td>
                                         <td>{`${appointment.fastingHours} horas`}</td>
                                         <td>
                                             <button
@@ -480,7 +551,6 @@ const Dashboard = () => {
                                                 Procesar Toma
                                             </button>
                                         </td>
-                                        
                                         <td>
                                             <PrintButton appointment={appointment} />
                                             <button
