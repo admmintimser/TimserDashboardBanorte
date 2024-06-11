@@ -1,12 +1,12 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useState, useCallback } from "react";
 import { Context } from "../main";
 import { Navigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
-import { FaSearch } from "react-icons/fa"; // Asegúrate de importar FaSearch
-import PrintButton from "./PrintButton"; // Asegúrate de importar tu nuevo componente
+import { FaSearch } from "react-icons/fa";
+import PrintButton from "./PrintButton";
 
 const locationMapping = {
     '16 de septiembre': 1915,
@@ -19,8 +19,7 @@ const locationMapping = {
 
 const Dashboard = () => {
     const [appointments, setAppointments] = useState([]);
-    const [appointmentst, setAppointmentst] = useState([]);
-    const [appointmentstp, setAppointmentstp] = useState([]);
+    const [appointmentCounts, setAppointmentCounts] = useState({ today: 0, todayProcessed: 0 });
     const [tokenDevel, setTokenDevel] = useState(null);
     const { isAuthenticated, authToken, admin } = useContext(Context);
     const [editingAppointment, setEditingAppointment] = useState(null);
@@ -39,77 +38,31 @@ const Dashboard = () => {
     const [successfulUpdates, setSuccessfulUpdates] = useState({});
     const [showModal, setShowModal] = useState(false);
 
-    const formatDate = (date) => {
-        return new Date(date).toISOString().split('T')[0];
-    };
-
-    const fetchData = async () => {
+    const fetchData = useCallback(async (url, updateFunc, defaultValue = []) => {
         try {
-            const response = await axios.get("https://webapitimser.azurewebsites.net/api/v1/appointment/getall", { withCredentials: true });
-            console.log('Data fetched:', response.data.appointments); // Debugging
-            if (response.data.appointments) {
-                setAppointments(response.data.appointments.reverse());
-            } else {
-                throw new Error('No appointments data received');
-            }
+            const response = await axios.get(url, { withCredentials: true });
+            updateFunc(response.data.appointments || response.data.count || defaultValue);
         } catch (error) {
-            console.error("Error fetching data", error);
-            toast.error("Error fetching appointments: " + error.message);
-            setAppointments([]);
+            toast.error(`Error fetching data: ${error.message}`);
+            updateFunc(defaultValue);
         }
-    };
-
-    const fetchDatat = async () => {
-        try {
-            const response = await axios.get("https://webapitimser.azurewebsites.net/api/v1/appointment/count/today", { withCredentials: true });
-            console.log('Data fetched:', response.data.count); // Debugging
-            if (response.data.count !== undefined) {
-                setAppointmentst(response.data.count);
-            } else {
-                throw new Error('No count data received');
-            }
-        } catch (error) {
-            console.error("Error fetching data", error);
-            toast.error("Error fetching appointments: " + error.message);
-            setAppointmentst(0);
-        }
-    };
-
-    const fetchDatatp = async () => {
-        try {
-            const response = await axios.get("https://webapitimser.azurewebsites.net/api/v1/appointment/count/today-processed", { withCredentials: true });
-            console.log('Data fetched:', response.data.count); // Debugging
-            if (response.data.count !== undefined) {
-                setAppointmentstp(response.data.count);
-            } else {
-                throw new Error('No count data received');
-            }
-        } catch (error) {
-            console.error("Error fetching data", error);
-            toast.error("Error fetching appointments: " + error.message);
-            setAppointmentstp(0);
-        }
-    };
-
-    useEffect(() => {
-        fetchData();
-        const interval = setInterval(fetchData, 30000); // Actualizar cada minuto
-        fetchDatat(); // Fetch today's appointments
-        const interval1 = setInterval(fetchDatat, 30000); // Actualizar cada minuto
-        fetchDatatp(); // Fetch today's processed appointments
-        const interval2 = setInterval(fetchDatatp, 30000); // Actualizar cada minuto
-       
-        return () => {
-            clearInterval(interval);
-            clearInterval(interval1);
-            clearInterval(interval2);
-        };
     }, []);
 
-    const addPatient = () => {
-        setShowModal(true);
-    };
+    useEffect(() => {
+        fetchData("https://webapitimser.azurewebsites.net/api/v1/appointment/getall", setAppointments);
+        fetchData("https://webapitimser.azurewebsites.net/api/v1/appointment/count/today", (count) => setAppointmentCounts(prev => ({ ...prev, today: count })));
+        fetchData("https://webapitimser.azurewebsites.net/api/v1/appointment/count/today-processed", (count) => setAppointmentCounts(prev => ({ ...prev, todayProcessed: count })));
+        
+        const interval = setInterval(() => {
+            fetchData("https://webapitimser.azurewebsites.net/api/v1/appointment/getall", setAppointments);
+            fetchData("https://webapitimser.azurewebsites.net/api/v1/appointment/count/today", (count) => setAppointmentCounts(prev => ({ ...prev, today: count })));
+            fetchData("https://webapitimser.azurewebsites.net/api/v1/appointment/count/today-processed", (count) => setAppointmentCounts(prev => ({ ...prev, todayProcessed: count })));
+        }, 30000);
 
+        return () => clearInterval(interval);
+    }, [fetchData]);
+
+    const addPatient = () => setShowModal(true);
     const handleModalClose = () => {
         setShowModal(false);
         setFormValues({
@@ -127,86 +80,62 @@ const Dashboard = () => {
 
     const handleFormChange = (e) => {
         const { name, value, type, checked } = e.target;
-        const updatedValue = type === 'checkbox' ? checked : value;
-        setFormValues((prevValues) => ({
+        setFormValues(prevValues => ({
             ...prevValues,
-            [name]: updatedValue,
-            ...(name === 'email' && { confirmEmail: updatedValue })
+            [name]: type === 'checkbox' ? checked : value,
+            ...(name === 'email' && { confirmEmail: value })
         }));
     };
 
     const handleFormSubmit1 = async (e) => {
         e.preventDefault();
         try {
-            await axios.post("https://webapitimser.azurewebsites.net/api/v1/appointment/post", formValues, {
-                withCredentials: true,
-            });
+            await axios.post("https://webapitimser.azurewebsites.net/api/v1/appointment/post", formValues, { withCredentials: true });
             toast.success("Cita creada con éxito");
             handleModalClose();
-            fetchData();
+            fetchData("https://webapitimser.azurewebsites.net/api/v1/appointment/getall", setAppointments);
         } catch (error) {
-            if (error.response && error.response.data && error.response.data.message) {
-                toast.error("Error al crear la cita: " + error.response.data.message);
-            } else {
-                toast.error("Error al crear la cita: " + error.message);
-            }
+            toast.error(`Error al crear la cita: ${error.response?.data?.message || error.message}`);
         }
     };
 
     const handleUpdateDevelab = async (appointmentId, newStatus, appointment) => {
-        if (successfulUpdates[appointmentId]) {
-            const confirm = window.confirm("Esta cita ya fue procesada con éxito. ¿Deseas enviar de nuevo?");
-            if (!confirm) {
-                return;
-            }
-        }
+        if (successfulUpdates[appointmentId] && !window.confirm("Esta cita ya fue procesada con éxito. ¿Deseas enviar de nuevo?")) return;
 
         try {
-            if (!appointment.sampleLocationValue && appointment.sampleLocation) {
-                appointment.sampleLocationValue = locationMapping[appointment.sampleLocation] || appointment.sampleLocationValue;
-            }
-
+            const sampleLocationValue = locationMapping[appointment.sampleLocation] || appointment.sampleLocationValue;
             const currentDateTime = new Date().toISOString();
-            const { data } = await axios.put(
-                `https://webapitimser.azurewebsites.net/api/v1/appointment/update/${appointmentId}`,
-                {
-                    tomaEntregada: newStatus,
-                    tomaProcesada: true,
-                    fechaToma: currentDateTime,
-                },
-                { withCredentials: true, headers: { Authorization: `Bearer ${authToken}` } }
-            );
 
-            setAppointments((prevAppointments) => prevAppointments.map(
-                (appt) => appt._id === appointmentId
-                    ? { ...appt, tomaEntregada: newStatus, tomaProcesada: true, fechaToma: currentDateTime }
-                    : appt
+            await axios.put(`https://webapitimser.azurewebsites.net/api/v1/appointment/update/${appointmentId}`, {
+                tomaEntregada: newStatus,
+                tomaProcesada: true,
+                fechaToma: currentDateTime,
+                sampleLocationValue
+            }, { withCredentials: true, headers: { Authorization: `Bearer ${authToken}` } });
+
+            setAppointments(prevAppointments => prevAppointments.map(appt => 
+                appt._id === appointmentId ? { ...appt, tomaEntregada: newStatus, tomaProcesada: true, fechaToma: currentDateTime, sampleLocationValue } : appt
             ));
 
             setSuccessfulUpdates(prev => ({ ...prev, [appointmentId]: true }));
             toast.success("Estatus Develab actualizado con éxito");
 
-            if (newStatus) {
-                await performExternalApiCalls(appointment);
-            }
+            if (newStatus) await performExternalApiCalls(appointment);
         } catch (error) {
-            toast.error(
-                error.response?.data?.message || "Error al actualizar el estatus Develab"
-            );
+            toast.error(`Error al actualizar el estatus Develab: ${error.response?.data?.message || error.message}`);
             setSuccessfulUpdates(prev => ({ ...prev, [appointmentId]: false }));
         }
     };
 
     const performExternalApiCalls = async (appointment) => {
         try {
-            const loginResponse = await axios.post("https://webapi.devellab.mx/api/Account/login", {
+            const { data: { accessToken: token } } = await axios.post("https://webapi.devellab.mx/api/Account/login", {
                 username: "mhs",
                 password: "cd098f3b9eae4ae7af3911aec1847d76"
             });
-            const token = loginResponse.data.accessToken;
             setTokenDevel(token);
 
-            const patientData = {
+            const { data: { customerId } } = await axios.post("https://webapi.devellab.mx/api/Patient/", {
                 code: "",
                 name: appointment.patientFirstName,
                 lastname: appointment.patientLastName,
@@ -216,102 +145,48 @@ const Dashboard = () => {
                 gender: "F",
                 email: appointment.email,
                 comment: "",
-                customerId: -1,
-                extraField1: "",
-                extraField2: "",
-                extraField3: "",
-                extraField4: "",
-                extraField5: "",
-                extraField6: ""
-            };
+                customerId: -1
+            }, { headers: { Authorization: `Bearer ${token}` } });
 
-            const patientResponse = await axios.post("https://webapi.devellab.mx/api/Patient/", patientData, {
-                headers: {
-                    accept: "*/*",
-                    Authorization: `Bearer ${token}`
-                }
-            });
-            const customerId = patientResponse.data.customerId;
+            const sampleDate = new Date(appointment.fechaToma || new Date()).toISOString().slice(0, 16);
 
-            const fechaTomaValida = appointment.fechaToma ? new Date(appointment.fechaToma) : new Date();
-            const sampleDate = fechaTomaValida.toISOString().slice(0, 16);
-
-            const orderData = {
+            const { data: { orderNumber, orderId } } = await axios.post("https://webapi.devellab.mx/api/Order/", {
                 branchId: 1,
                 patientId: customerId,
                 observations: "",
                 customerId: 1783,
-                customerOrderNumber: "",
-                extraField1: "",
-                extraField2: "",
-                extraField3: "",
-                extraField4: "",
-                extraField5: "",
-                extraField6: "",
-                exams: [
-                    {
-                        examId: "E-470"
-                    }
-                ],  
-                sampleDate: sampleDate
-            };
+                sampleDate,
+                exams: [{ examId: "E-470" }]
+            }, { headers: { Authorization: `Bearer ${token}` } });
 
-            const orderResponse = await axios.post("https://webapi.devellab.mx/api/Order/", orderData, {
-                headers: {
-                    accept: "*/*",
-                    Authorization: `Bearer ${token}`
-                }
-            });
+            await axios.put(`https://webapitimser.azurewebsites.net/api/v1/appointment/update/${appointment._id}`, { FolioDevelab: orderNumber, OrderIDDevelab: orderId }, { withCredentials: true, headers: { Authorization: `Bearer ${authToken}` } });
 
-            const updateFields = {
-                FolioDevelab: orderResponse.data.orderNumber,
-                OrderIDDevelab: orderResponse.data.orderId
-            };
-
-            const updateResponse = await axios.put(`https://webapitimser.azurewebsites.net/api/v1/appointment/update/${appointment._id}`, updateFields, {
-                withCredentials: true,
-                headers: { Authorization: `Bearer ${authToken}` }
-            });
-
-            setAppointments((prevAppointments) => prevAppointments.map(appt => {
-                if (appt._id === appointment._id) {
-                    return {
-                        ...appt,
-                        ...updateFields
-                    };
-                }
-                return appt;
-            }));
+            setAppointments(prevAppointments => prevAppointments.map(appt => 
+                appt._id === appointment._id ? { ...appt, FolioDevelab: orderNumber, OrderIDDevelab: orderId } : appt
+            ));
 
             toast.success("Paciente cargado exitosamente a Devellab y actualizado localmente");
         } catch (error) {
-            toast.error("Error al procesar la información del paciente en Devellab o localmente: " + error.message);
-            console.error(error);
+            toast.error(`Error al procesar la información del paciente en Devellab: ${error.message}`);
         }
     };
 
     const handleDeleteAppointment = async (appointmentId) => {
         if (window.confirm("¿Estás seguro que deseas eliminar esta cita?")) {
             try {
-                await axios.delete(`https://webapitimser.azurewebsites.net/api/v1/appointment/delete/${appointmentId}`, {
-                    withCredentials: true,
-                    headers: { Authorization: `Bearer ${authToken}` }
-                });
-                setAppointments((prevAppointments) => prevAppointments.filter(appt => appt._id !== appointmentId));
+                await axios.delete(`https://webapitimser.azurewebsites.net/api/v1/appointment/delete/${appointmentId}`, { withCredentials: true, headers: { Authorization: `Bearer ${authToken}` } });
+                setAppointments(prevAppointments => prevAppointments.filter(appt => appt._id !== appointmentId));
                 toast.success("Cita eliminada con éxito");
             } catch (error) {
                 toast.error("Error al eliminar la cita");
-                console.error(error);
             }
         }
     };
 
     const handleUpdateAppointment = async (appointmentId, updatedFields) => {
         try {
-            const { data } = await axios.put(`https://webapitimser.azurewebsites.net/api/v1/appointment/update/${appointmentId}`, updatedFields, { withCredentials: true, headers: { Authorization: `Bearer ${authToken}` } });
-            setAppointments((prevAppointments) => prevAppointments.map(
-                (appt) => appt._id === appointmentId ? { ...appt, ...updatedFields } : appt
-            ));
+            await axios.put(`https://webapitimser.azurewebsites.net/api/v1/appointment/update/${appointmentId}`, updatedFields, { withCredentials: true, headers: { Authorization: `Bearer ${authToken}` } });
+            setAppointments(prevAppointments => prevAppointments.map(appt => appt._id === appointmentId ? { ...appt, ...updatedFields } : appt));
             toast.success("Cita actualizada con éxito");
             setEditingAppointment(null);
             setFormValues({
@@ -327,7 +202,6 @@ const Dashboard = () => {
             });
         } catch (error) {
             toast.error("Error al actualizar la cita");
-            console.error(error);
         }
     };
 
@@ -341,7 +215,7 @@ const Dashboard = () => {
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
-        setFormValues({ ...formValues, [name]: value });
+        setFormValues(prevValues => ({ ...prevValues, [name]: value }));
     };
 
     const handleFormSubmit = (e) => {
@@ -365,14 +239,13 @@ const Dashboard = () => {
     return (
         <section className="dashboard page">
             <div className="banner">
-                
                 <div className="secondBox">
                     <p>Cuestionarios</p>
-                    <h3>{appointmentst}</h3>
+                    <h3>{appointmentCounts.today}</h3>
                 </div>
                 <div className="secondBox">
                     <p>Tomadas</p>
-                    <h3>{appointmentstp}</h3>
+                    <h3>{appointmentCounts.todayProcessed}</h3>
                 </div>
                 <div className="secondBox">
                     <p>Pacientes</p>
@@ -393,81 +266,77 @@ const Dashboard = () => {
                 </div>
             </div>
             <div className="banner">
-                <button onClick={fetchData} className="update-button">Actualizar</button>
+                <button onClick={() => fetchData("https://webapitimser.azurewebsites.net/api/v1/appointment/getall", setAppointments)} className="update-button">Actualizar</button>
                 <button onClick={downloadExcel} className="download-button">Descargar Excel</button>
                 <button onClick={addPatient} className="appoin-button">Agregar</button>
                 {showModal && (
-                <div className="modal">
-                    <div className="modal-content">
-                        <span className="close" onClick={handleModalClose}>&times;</span>
-                        <h2>Agregar Nueva Cita</h2>
-                        <form onSubmit={handleFormSubmit1}>
-                            <input
-                                type="text"
-                                name="patientFirstName"
-                                placeholder="Nombre"
-                                value={formValues.patientFirstName}
-                                onChange={handleFormChange}
-                                className="input"
-                                required
-                            />
-                            <input
-                                type="text"
-                                name="patientLastName"
-                                placeholder="Apellido"
-                                value={formValues.patientLastName}
-                                onChange={handleFormChange}
-                                className="input"
-                                required
-                            />
-                            <input
-                                type="email"
-                                name="email"
-                                placeholder="Correo Electrónico"
-                                value={formValues.email}
-                                onChange={handleFormChange}
-                                className="input"
-                                required
-                            />
-                            <input
-                                type="date"
-                                name="birthDate"
-                                placeholder="Fecha de Nacimiento"
-                                value={formValues.birthDate}
-                                onChange={handleFormChange}
-                                className="input"
-                                required
-                            />
-                            <input
-                                type="text"
-                                name="mobilePhone"
-                                placeholder="Teléfono móvil"
-                                value={formValues.mobilePhone}
-                                onChange={handleFormChange}
-                                className="input"
-                                required
-                            />
-                            <select
-                                name="sampleLocation"
-                                onChange={handleFormChange}
-                                className="input"
-                                required
-                            >
-                                <option value="">Selecciona una ubicación</option>
-                                <option value="Sede Insurgentes - Sala de Ajustes">Sede Insurgentes - Sala de Ajustes</option>
-                                <option value="Edificio Revolución - Aula Cristal">Edificio Revolución - Aula Cristal</option>
-                                <option value="16 de septiembre">16 de septiembre</option>
-                                <option value="Suprema Corte">Suprema Corte</option>
-                                <option value="Bolivar">Bolivar</option>
-                                <option value="Pino Suaréz">Pino Suaréz</option>
-                                <option value="Toluca">Toluca</option>
-                                <option value="Chimalpopoca">Chimalpopoca</option>
-                            </select>
-                            <button type="submit" className="save-button">Guardar</button>
-                        </form>
+                    <div className="modal">
+                        <div className="modal-content">
+                            <span className="close" onClick={handleModalClose}>&times;</span>
+                            <h2>Agregar Nueva Cita</h2>
+                            <form onSubmit={handleFormSubmit1}>
+                                <input
+                                    type="text"
+                                    name="patientFirstName"
+                                    placeholder="Nombre"
+                                    value={formValues.patientFirstName}
+                                    onChange={handleFormChange}
+                                    className="input"
+                                    required
+                                />
+                                <input
+                                    type="text"
+                                    name="patientLastName"
+                                    placeholder="Apellido"
+                                    value={formValues.patientLastName}
+                                    onChange={handleFormChange}
+                                    className="input"
+                                    required
+                                />
+                                <input
+                                    type="email"
+                                    name="email"
+                                    placeholder="Correo Electrónico"
+                                    value={formValues.email}
+                                    onChange={handleFormChange}
+                                    className="input"
+                                    required
+                                />
+                                <input
+                                    type="date"
+                                    name="birthDate"
+                                    placeholder="Fecha de Nacimiento"
+                                    value={formValues.birthDate}
+                                    onChange={handleFormChange}
+                                    className="input"
+                                    required
+                                />
+                                <input
+                                    type="text"
+                                    name="mobilePhone"
+                                    placeholder="Teléfono móvil"
+                                    value={formValues.mobilePhone}
+                                    onChange={handleFormChange}
+                                    className="input"
+                                    required
+                                />
+                                <select
+                                    name="sampleLocation"
+                                    value={formValues.sampleLocation}
+                                    onChange={handleFormChange}
+                                    className="input"
+                                    required
+                                >
+                                    <option value="">Selecciona una ubicación</option>
+                                    {Object.keys(locationMapping).map(location => (
+                                        <option key={location} value={location}>{location}</option>
+                                    ))}
+                                </select>
+                                <button type="submit" className="save-button">Guardar</button>
+                            </form>
+                        </div>
                     </div>
-                </div>
-            )}
+                )}
                 <table>
                     <thead>
                         <tr>
@@ -481,14 +350,14 @@ const Dashboard = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {appointments.length > 0 ? appointments.filter(appointment => 
+                        {appointments.length > 0 ? appointments.filter(appointment =>
                             appointment.patientFirstName.toLowerCase().includes(searchTerm) ||
                             appointment.patientLastName.toLowerCase().includes(searchTerm) ||
                             appointment.sampleLocation.toLowerCase().includes(searchTerm)
                         ).map((appointment) => (
                             <tr key={appointment._id}>
                                 {editingAppointment === appointment._id ? (
-                                    <td colSpan="5">
+                                    <td colSpan="7">
                                         <form onSubmit={handleFormSubmit}>
                                             <input
                                                 type="text"
@@ -498,7 +367,7 @@ const Dashboard = () => {
                                                 className="input"
                                             />
                                             <input
-                                                type="text"
+                                                type="email"
                                                 name="email"
                                                 value={formValues.email}
                                                 onChange={handleInputChange}
@@ -519,7 +388,7 @@ const Dashboard = () => {
                                                 className="input"
                                             />
                                             <input
-                                                type="date" 
+                                                type="date"
                                                 name="birthDate"
                                                 value={formValues.birthDate}
                                                 onChange={handleInputChange}
@@ -569,14 +438,18 @@ const Dashboard = () => {
                                     </>
                                 )}
                             </tr>
-                        )) : <tr>
-                            <td colSpan="5">No appointments found.</td>
-                        </tr>}
+                        )) : (
+                            <tr>
+                                <td colSpan="7">No se encontraron citas.</td>
+                            </tr>
+                        )}
                     </tbody>
                 </table>
             </div>
         </section>
     );
 };
+
+const formatDate = (date) => new Date(date).toISOString().split('T')[0];
 
 export default Dashboard;
