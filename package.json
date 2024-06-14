@@ -15,6 +15,7 @@
     "bwip-js": "^4.3.2",
     "express": "^4.18.1",
     "file-saver": "^2.0.5",
+    "moment-timezone": "^0.5.45",
     "package.json": "^2.0.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

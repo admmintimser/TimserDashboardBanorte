@@ -7,6 +7,7 @@ import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import { FaSearch } from "react-icons/fa";
 import PrintButton from "./PrintButton";
+import moment from "moment-timezone";
 
 const locationMapping = {
   "16 de septiembre": 1915,
@@ -38,10 +39,6 @@ const Dashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [successfulUpdates, setSuccessfulUpdates] = useState({});
   const [showModal, setShowModal] = useState(false);
-
-  const formatDate = (date) => {
-    return new Date(date).toISOString().split("T")[0];
-  };
 
   const fetchData = async () => {
     try {
@@ -143,7 +140,10 @@ const Dashboard = () => {
     try {
       await axios.post(
         "https://webapitimser.azurewebsites.net/api/v1/appointment/post",
-        formValues,
+        {
+          ...formValues,
+          birthDate: moment(formValues.birthDate).tz("America/Mexico_City").format(),
+        },
         {
           withCredentials: true,
         }
@@ -173,7 +173,7 @@ const Dashboard = () => {
           appointment.sampleLocationValue;
       }
 
-      const currentDateTime = new Date().toISOString();
+      const currentDateTime = moment().tz("America/Mexico_City").toISOString();
       const { data } = await axios.put(
         `https://webapitimser.azurewebsites.net/api/v1/appointment/update/${appointmentId}`,
         {
@@ -217,8 +217,8 @@ const Dashboard = () => {
       const loginResponse = await axios.post(
         "https://webapi.devellab.mx/api/Account/login",
         {
-          username: "mhs",
-          password: "cd098f3b9eae4ae7af3911aec1847d76",
+          username: "preventix",
+          password: "7b5cbac342284010ac18f17ceba6364f",
         }
       );
       const token = loginResponse.data.accessToken;
@@ -256,12 +256,12 @@ const Dashboard = () => {
       const customerId = patientResponse.data.customerId;
 
       const fechaTomaValida = appointment.fechaToma
-        ? new Date(appointment.fechaToma)
-        : new Date();
+        ? moment(appointment.fechaToma).tz("America/Mexico_City")
+        : moment().tz("America/Mexico_City");
       const sampleDate = fechaTomaValida.toISOString().slice(0, 16);
 
       const orderData = {
-        branchId: 1,
+        branchId: 31,
         patientId: customerId,
         observations: "",
         customerId: 1783,
@@ -352,7 +352,10 @@ const Dashboard = () => {
     try {
       const { data } = await axios.put(
         `https://webapitimser.azurewebsites.net/api/v1/appointment/update/${appointmentId}`,
-        updatedFields,
+        {
+          ...updatedFields,
+          birthDate: moment(updatedFields.birthDate).tz("America/Mexico_City").format(),
+        },
         {
           withCredentials: true,
           headers: { Authorization: `Bearer ${authToken}` },
@@ -385,7 +388,7 @@ const Dashboard = () => {
     setEditingAppointment(appointment._id);
     setFormValues({
       ...appointment,
-      birthDate: formatDate(appointment.birthDate),
+      birthDate: appointment.birthDate.split('T')[0], // mantener la fecha tal como viene de la base de datos
     });
   };
 
@@ -559,15 +562,9 @@ const Dashboard = () => {
                 .filter(
                   (appointment) =>
                     appointment._id.toLowerCase().includes(searchTerm) ||
-                    appointment.patientFirstName
-                      .toLowerCase()
-                      .includes(searchTerm) ||
-                    appointment.patientLastName
-                      .toLowerCase()
-                      .includes(searchTerm) ||
-                    appointment.sampleLocation
-                      .toLowerCase()
-                      .includes(searchTerm)
+                    appointment.patientFirstName.toLowerCase().includes(searchTerm) ||
+                    appointment.patientLastName.toLowerCase().includes(searchTerm) ||
+                    appointment.sampleLocation.toLowerCase().includes(searchTerm)
                 )
                 .map((appointment) => (
                   <tr key={appointment._id}>
@@ -633,40 +630,22 @@ const Dashboard = () => {
                         <td>{`${appointment.patientFirstName} ${appointment.patientLastName}`}</td>
                         <td>{appointment.email}</td>
                         <td>{appointment.sampleLocation}</td>
-                        <td>{formatDate(appointment.birthDate)}</td>
+                        <td>{appointment.birthDate.split('T')[0]}</td> {/* Mostrar la fecha tal como viene de la base de datos */}
                         <td>{appointment.fastingHours}</td>
                         <td>
                           <button
-                            onClick={() =>
-                              handleUpdateDevelab(
-                                appointment._id,
-                                true,
-                                appointment
-                              )
-                            }
-                            className={`processbot ${
-                              appointment.tomaEntregada
-                                ? "processbot-green"
-                                : ""
-                            }`}
+                            onClick={() => handleUpdateDevelab(appointment._id, true, appointment)}
+                            className={`processbot ${appointment.tomaEntregada ? "processbot-green" : ""}`}
                           >
                             Procesar Toma
                           </button>
                         </td>
                         <td>
                           <PrintButton appointment={appointment} />
-                          <button
-                            onClick={() => handleEditClick(appointment)}
-                            className="update-button1"
-                          >
+                          <button onClick={() => handleEditClick(appointment)} className="update-button1">
                             Editar
                           </button>
-                          <button
-                            onClick={() =>
-                              handleDeleteAppointment(appointment._id)
-                            }
-                            className="delete-button"
-                          >
+                          <button onClick={() => handleDeleteAppointment(appointment._id)} className="delete-button">
                             Eliminar
                           </button>
                         </td>
