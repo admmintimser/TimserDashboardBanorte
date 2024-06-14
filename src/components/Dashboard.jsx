@@ -634,7 +634,7 @@ const Dashboard = () => {
                         <td>{appointment.email}</td>
                         <td>{appointment.sampleLocation}</td>
                         <td>{formatDate(appointment.birthDate)}</td>
-                        <td>{`${appointment.fastingHours} horas`}</td>
+                        <td>{appointment.fastingHours}</td>
                         <td>
                           <button
                             onClick={() =>
