@@ -402,17 +402,29 @@ const Dashboard = () => {
     handleUpdateAppointment(editingAppointment, formValues);
   };
 
-  const downloadExcel = () => {
-    const worksheet = XLSX.utils.json_to_sheet(appointments);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Appointments");
-    const excelBuffer = XLSX.write(workbook, {
-      bookType: "xlsx",
-      type: "array",
-    });
-    const data = new Blob([excelBuffer], { type: "application/octet-stream" });
-    saveAs(data, "appointments.xlsx");
+  const downloadExcel = async () => {
+    try {
+      const response = await axios.get(
+        "https://webapitimser.azurewebsites.net/api/v1/appointment/getall/today",
+        { withCredentials: true }
+      );
+  
+      const appointments = response.data.appointments;
+      
+      const worksheet = XLSX.utils.json_to_sheet(appointments);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Pacientes");
+      const excelBuffer = XLSX.write(workbook, {
+        bookType: "xlsx",
+        type: "array",
+      });
+      const data = new Blob([excelBuffer], { type: "application/octet-stream" });
+      saveAs(data, "Reporte.xlsx");
+    } catch (error) {
+      toast.error("Error downloading Excel file: " + error.message);
+    }
   };
+  
 
   if (!isAuthenticated) {
     return <Navigate to="/login" />;
