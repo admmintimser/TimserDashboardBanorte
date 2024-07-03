@@ -536,6 +536,7 @@ const Dashboard = () => {
                   required
                 >
                   <option value="">Selecciona una ubicación</option>
+                  <option value="Periférico 1950">Periférico 1950</option>
                   <option value="Sede Insurgentes - Sala de Ajustes">
                     Sede Insurgentes - Sala de Ajustes
                   </option>
