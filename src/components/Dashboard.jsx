@@ -261,10 +261,10 @@ const Dashboard = () => {
       const sampleDate = fechaTomaValida.toISOString().slice(0, 16);
 
       const orderData = {
-        branchId: 31,
+        branchId: 1,
         patientId: customerId,
         observations: "",
-        customerId: 1783,
+        customerId: 2371,
         customerOrderNumber: "",
         extraField1: "",
         extraField2: "",
